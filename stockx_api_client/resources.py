@@ -1,7 +1,5 @@
 import json
 
-from numpy import prod
-
 from .utils import urljoin
 
 class ResourcePool:
