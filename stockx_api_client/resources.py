@@ -1,5 +1,7 @@
 import json
 
+from numpy import prod
+
 from .utils import urljoin
 
 class ResourcePool:
@@ -19,15 +21,45 @@ class CreatableResource:
             res = self._session.post(self._endpoint, data=json.dumps(item))
         return res
 
+class GQLResource:
+    def query(self, payload, custom_headers=None):
+        self._session.headers.update({
+            'content-type': 'application/json; charset=utf-8',
+            'apollographql-client-name': 'Iron'            
+        })
+        if custom_headers:
+            self._session.headers.update(custom_headers)        
+        res = self._session.post(self._endpoint, data=json.dumps(payload))
+        if custom_headers:
+            for k in custom_headers.keys():
+                self._session.headers.pop(k)                
+        self._session.headers.pop('content-type')
+        self._session.headers.pop('apollographql-client-name')
+        return res
+
 class GettableResource:
-    def fetch_item(self, code):
+    def fetch_item(self, code, params=None, custom_headers=None):
+        if custom_headers:
+            self._session.headers.update(custom_headers)
+
         url = urljoin(self._endpoint, code)
-        res = self._session.get(url)
+        res = self._session.get(url, params=params)
+
+        if custom_headers:
+            for k in custom_headers.keys():
+                self._session.headers.pop(k)        
         return res
 
 class ListableResource:
-    def fetch_list(self, params=None):
+    def fetch_list(self, params=None, custom_headers=None):
+        if custom_headers:
+            self._session.headers.update(custom_headers)
+
         res = self._session.get(self._endpoint, params=params)
+
+        if custom_headers:
+            for k in custom_headers.keys():
+                self._session.headers.pop(k)
         return res
 
 class UpdatableResource:
@@ -51,3 +83,25 @@ class BrowsePool(
     ListableResource
 ):
     pass
+
+class GQLPool(
+    ResourcePool,
+    GQLResource
+):
+    pass
+
+class ProductActivityPool(
+    ResourcePool,
+    ListableResource
+):
+    pass
+
+class ProductsPool(
+    ResourcePool,
+    ListableResource,
+    GettableResource
+):
+    def activity(self, product_id):
+        return ProductActivityPool(
+            urljoin(self._endpoint, product_id, 'activity'), self._session
+        )
